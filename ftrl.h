@@ -75,6 +75,7 @@ public:
     shared_ptr<FtrlData> data;
     shared_ptr<FtrlData> test_data;
     shared_ptr<Parameter> param;
+    FtrlProblem() {};
     FtrlProblem(shared_ptr<FtrlData> &data, shared_ptr<FtrlData> &test_data, shared_ptr<Parameter> &param)
         :data(data), test_data(test_data), param(param) {};
 
@@ -91,6 +92,7 @@ public:
     void print_epoch_info();
     void print_header_info();
     void save_model(string model_path);
+    FtrlLong load_model(string model_path);
     void fun();
     void validate();
 };

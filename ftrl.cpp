@@ -126,6 +126,26 @@ void FtrlProblem::save_model(string model_path) {
     f_out.close();
 }
 
+FtrlLong FtrlProblem::load_model(string model_path) {
+
+    ifstream f_in(model_path);
+
+    string dummy;
+    FtrlLong nr_feature;
+
+    f_in >> dummy >> dummy >> dummy >> nr_feature;
+    w.resize(nr_feature);
+
+
+    FtrlFloat *ptr = w.data();
+    for(FtrlLong j = 0; j < nr_feature; j++, ptr++)
+    {
+        f_in >> dummy;
+        f_in >> *ptr;
+    }
+    return nr_feature;
+}
+
 void FtrlProblem::initialize() {
     w.resize(data->n, 0);
     z.resize(data->n, 0);
