@@ -5,7 +5,7 @@ CXXFLAGS = -Wall -O3 -std=c++0x -march=native
 DFLAG += -DUSEOMP
 CXXFLAGS += -fopenmp
 
-all: train
+all: train predict
 
 train: train.cpp ftrl.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
