@@ -45,6 +45,7 @@ string train_help()
     "-s <solver>: set solver type (default 1)\n"
 	"	 0 -- AdaGrad framework\n"
 	"	 1 -- FTRL framework\n"
+	"	 2 -- RDA framework\n"
     "-a <alpha>: set initial learning rate\n"
     "-b <beta>: set shrinking base for learning rate schedule\n"
     "-l1 <lambda_1>: set regularization coefficient on l1 regularizer (default 0.1)\n"
