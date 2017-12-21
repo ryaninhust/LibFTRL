@@ -156,6 +156,14 @@ Option parse_option(int argc, char **argv)
         {
             option.param->normalized = true;
         }
+        else if(args[i].compare("--verbose") == 0)
+        {
+            option.param->verbose = true;
+        }
+        else if(args[i].compare("--freq") == 0)
+        {
+            option.param->freq = true;
+        }
         else
         {
             break;
@@ -174,7 +182,7 @@ int main(int argc, char *argv[])
     try
     {
         Option option = parse_option(argc, argv);
-        //omp_set_num_threads(option.param->nr_threads);
+        omp_set_num_threads(option.param->nr_threads);
 
         shared_ptr<FtrlData> data = make_shared<FtrlData>(option.data_path);
         shared_ptr<FtrlData> test_data = make_shared<FtrlData>(option.test_path);

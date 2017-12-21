@@ -171,7 +171,10 @@ void FtrlProblem::initialize() {
         chunk.clear();
     }
     for (FtrlInt j = 0; j < data->n; j++) {
-        f[j]  = 1/f[j];
+        if (param->freq)
+            f[j]  = 1;
+        else
+            f[j]  = 1/f[j];
     }
     start_time = omp_get_wtime();
 }
@@ -179,6 +182,7 @@ void FtrlProblem::initialize() {
 void FtrlProblem::print_header_info() {
     cout.width(4);
     cout << "iter";
+    if (param->verbose) {
     cout.width(13);
     cout << "fun_val";
     cout.width(13);
@@ -187,6 +191,7 @@ void FtrlProblem::print_header_info() {
     cout << "|grad|";
     cout.width(13);
     cout << "tr_logloss";
+    }
     if(!test_data->file_name.empty()) {
         cout.width(13);
         cout << "va_logloss";
@@ -200,14 +205,16 @@ void FtrlProblem::print_header_info() {
 void FtrlProblem::print_epoch_info() {
     cout.width(4);
     cout << t+1;
-    cout.width(13);
-    cout << scientific << setprecision(3) << fun_val;
-    cout.width(13);
-    cout << scientific << setprecision(3) << reg;
-    cout.width(13);
-    cout << scientific << setprecision(3) << gnorm;
-    cout.width(13);
-    cout << fixed << setprecision(5) << tr_loss;
+    if (param->verbose) {
+        cout.width(13);
+        cout << scientific << setprecision(3) << fun_val;
+        cout.width(13);
+        cout << scientific << setprecision(3) << reg;
+        cout.width(13);
+        cout << scientific << setprecision(3) << gnorm;
+        cout.width(13);
+        cout << fixed << setprecision(5) << tr_loss;
+    }
     if (!test_data->file_name.empty()) {
         cout.width(13);
         cout << fixed << setprecision(5) << va_loss;
@@ -347,7 +354,8 @@ void FtrlProblem::solve_adagrad() {
         }
         chunk.clear();
     }
-    fun();
+    if (param->verbose)
+        fun();
     if (!test_data->file_name.empty()) {
     validate();
     }
@@ -401,7 +409,8 @@ void FtrlProblem::solve_rda() {
         }
         chunk.clear();
     }
-    fun();
+    if (param->verbose)
+        fun();
     if (!test_data->file_name.empty()) {
     validate();
     }
@@ -420,6 +429,9 @@ void FtrlProblem::fun() {
 
         chunk.read();
 
+        FtrlFloat local_tr_loss = 0.0;
+
+#pragma omp parallel for schedule(guided) reduction(+: local_tr_loss)
         for (FtrlInt i = 0; i < chunk.l; i++) {
 
             FtrlFloat y=chunk.labels[i], wTx=0;
@@ -436,12 +448,12 @@ void FtrlProblem::fun() {
             if (wTx*y > 0) {
                 exp_m = exp(-y*wTx);
                 tmp = exp_m/(1+exp_m);
-                tr_loss += log(1+exp_m);
+                local_tr_loss += log(1+exp_m);
             }
             else {
                 exp_m = exp(y*wTx);
                 tmp = 1/(1+exp_m);
-                tr_loss += -y*wTx+log(1+exp_m); 
+                local_tr_loss += -y*wTx+log(1+exp_m); 
             }
 
             FtrlFloat kappa = -y*tmp;
@@ -453,6 +465,7 @@ void FtrlProblem::fun() {
                 grad[idx] += g;
             }
         }
+        tr_loss += local_tr_loss;
         chunk.clear();
     }
     for (FtrlInt j = 0; j < data->n; j++) {
@@ -475,6 +488,7 @@ void FtrlProblem::solve() {
 
         chunk.read();
 
+#pragma omp parallel for schedule(guided)
         for (FtrlInt i = 0; i < chunk.l; i++) {
 
             FtrlFloat y=chunk.labels[i], wTx=0;
@@ -517,7 +531,8 @@ void FtrlProblem::solve() {
         }
         chunk.clear();
     }
-    fun();
+    if (param->verbose)
+        fun();
     if (!test_data->file_name.empty()) {
     validate();
     }
