@@ -47,7 +47,7 @@ void FtrlChunk::clear() {
 void FtrlData::split_chunks() {
     string line;
     ifstream fs(file_name);
-    
+
     FtrlInt i = 0, chunk_id = 0;
     FtrlChunk chunk(file_name, chunk_id);
     nr_chunk++;
@@ -75,7 +75,7 @@ void FtrlData::split_chunks() {
             i++;
             max_nnz++;
             if (n < idx+1) {
-                n = idx+1; 
+                n = idx+1;
             }
             chunk.nodes.push_back(Node(idx, val));
             r += val*val;
@@ -224,7 +224,7 @@ void FtrlProblem::print_epoch_info() {
     cout.width(13);
     cout << fixed << setprecision(5) << omp_get_wtime() - start_time;
     cout << endl;
-} 
+}
 
 
 void FtrlProblem::validate() {
@@ -262,7 +262,7 @@ void FtrlProblem::validate() {
             }
             else {
                 exp_m = exp(y*wTx);
-                local_va_loss += -y*wTx+log(1+exp_m); 
+                local_va_loss += -y*wTx+log(1+exp_m);
             }
         }
         global_i += chunk.l;
@@ -453,7 +453,7 @@ void FtrlProblem::fun() {
             else {
                 exp_m = exp(y*wTx);
                 tmp = 1/(1+exp_m);
-                local_tr_loss += -y*wTx+log(1+exp_m); 
+                local_tr_loss += -y*wTx+log(1+exp_m);
             }
 
             FtrlFloat kappa = -y*tmp;
@@ -482,15 +482,21 @@ void FtrlProblem::solve() {
     FtrlInt nr_chunk = data->nr_chunk;
     FtrlFloat l1 = param->l1, l2 = param->l2, a = param->alpha, b = param->beta;
     for (t = 0; t < param->nr_pass; t++) {
-    for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
-
+    int ind = 0;
+    vector<FtrlInt> outer_order(nr_chunk);
+    iota(outer_order.begin(), outer_order.end(), 0);
+    random_shuffle(outer_order.begin(),outer_order.end());
+    for (auto chunk_id:outer_order) {
         FtrlChunk chunk = data->chunks[chunk_id];
 
         chunk.read();
+        vector<FtrlInt> inner_oder(chunk.l);
+        iota(inner_oder.begin(), inner_oder.end(),0);
+        random_shuffle(inner_oder.begin(), inner_oder.end());
 
 #pragma omp parallel for schedule(guided)
-        for (FtrlInt i = 0; i < chunk.l; i++) {
-
+        for (FtrlInt ii = 0; ii < chunk.l; ii++) {
+            FtrlInt i = inner_oder[ii];
             FtrlFloat y=chunk.labels[i], wTx=0;
 
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
@@ -520,14 +526,17 @@ void FtrlProblem::solve() {
 
             FtrlFloat kappa = -y*tmp;
 
+            FtrlFloat g_norm = 0;
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
                 FtrlFloat val = x.val, g = kappa*val, theta=0;
+                g_norm += g*g;
                 theta = 1/a*(sqrt(n[idx]+g*g)-sqrt(n[idx]));
                 z[idx] += g-theta*w[idx];
                 n[idx] += g*g;
             }
+            //printf("%d:g_norm=%lf\n", ind++, sqrt(g_norm));
         }
         chunk.clear();
     }
