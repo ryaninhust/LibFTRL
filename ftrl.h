@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
+#include <cstring>
 
 #include "omp.h"
 
@@ -34,8 +35,8 @@ class Parameter {
 public:
     FtrlFloat l1, l2, alpha, beta;
     FtrlInt nr_pass, nr_threads;
-    bool normalized, verbose, freq;
-    Parameter():l1(0.1), l2(0.1), alpha(0.1), beta(1), normalized(false),verbose(true), freq(true), nr_threads(1){};
+    bool normalized, verbose, freq, auto_stop, no_auc, in_memory;
+    Parameter():l1(0.1), l2(0.1), alpha(0.1), beta(1), normalized(false),verbose(true), freq(true), auto_stop(false), no_auc(false), in_memory(false), nr_threads(1){};
 };
 
 class FtrlChunk {
@@ -68,6 +69,7 @@ public:
     FtrlData(string file_name): file_name(file_name), l(0), n(0), nr_chunk(0) {};
     void print_data_info();
     void split_chunks();
+	void write_meta();
 };
 
 class FtrlProblem {
