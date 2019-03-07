@@ -43,9 +43,9 @@ string train_help()
     "\n"
     "options:\n"
     "-s <solver>: set solver type (default 1)\n"
-	"	 0 -- AdaGrad framework\n"
-	"	 1 -- FTRL framework\n"
-	"	 2 -- RDA framework\n"
+    "     0 -- AdaGrad framework\n"
+    "     1 -- FTRL framework\n"
+    "     2 -- RDA framework\n"
     "-a <alpha>: set initial learning rate\n"
     "-b <beta>: set shrinking base for learning rate schedule\n"
     "-l1 <lambda_1>: set regularization coefficient on l1 regularizer (default 0.1)\n"
@@ -55,7 +55,7 @@ string train_help()
     "-c <threads>: set number of cores\n"
     "--norm: Apply instance-wise normlization."
     "--no-auc: disable auc\n"
-	"--in-memory: keep data in memroy\n"
+    "--in-memory: keep data in memroy\n"
     "--auto-stop: stop at the iteration that achieves the best validation loss (must be used with -p)\n"
     );
 }
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 
         shared_ptr<FtrlData> data = make_shared<FtrlData>(option.data_path);
         shared_ptr<FtrlData> test_data = make_shared<FtrlData>(option.test_path);
-		data->split_chunks();
+        data->split_chunks();
         cout << "Tr_data: ";
         data->print_data_info();
 

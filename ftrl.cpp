@@ -17,12 +17,12 @@ void FtrlChunk::write() {
     if (f_bin == nullptr)
         cout << "Error" << endl;
 
-	chunk_meta meta;
-	meta.l = l;
-	meta.nnz = nnz;
-	meta.chunk_id = chunk_id;
+    chunk_meta meta;
+    meta.l = l;
+    meta.nnz = nnz;
+    meta.chunk_id = chunk_id;
 
-	fwrite(reinterpret_cast<char*>(&meta), sizeof(chunk_meta), 1, f_bin);
+    fwrite(reinterpret_cast<char*>(&meta), sizeof(chunk_meta), 1, f_bin);
     fwrite(labels.data(), sizeof(FtrlFloat), l, f_bin);
     fwrite(nnzs.data(), sizeof(FtrlInt), l+1, f_bin);
     fwrite(R.data(), sizeof(FtrlFloat), l, f_bin);
@@ -31,16 +31,16 @@ void FtrlChunk::write() {
 }
 
 void FtrlChunk::read() {
-	FILE *f_tr = fopen(file_name.c_str(), "rb");
+    FILE *f_tr = fopen(file_name.c_str(), "rb");
     if (f_tr == nullptr)
         cout << "Error" << endl;
 
-	chunk_meta meta;
+    chunk_meta meta;
 
-	fread(reinterpret_cast<char *>(&meta), sizeof(chunk_meta), 1, f_tr);
-	l = meta.l;
-	nnz = meta.nnz;
-	chunk_id = meta.chunk_id;
+    fread(reinterpret_cast<char *>(&meta), sizeof(chunk_meta), 1, f_tr);
+    l = meta.l;
+    nnz = meta.nnz;
+    chunk_id = meta.chunk_id;
 
     labels.resize(l);
     R.resize(l);
@@ -72,17 +72,17 @@ struct disk_problem_meta {
 };
 
 void FtrlData::write_meta() {
-	string meta_name = file_name + ".meta";
+    string meta_name = file_name + ".meta";
     FILE *f_meta = fopen(meta_name.c_str(), "wb");
     if (f_meta == nullptr)
         cout << "Error" << endl;
 
-	disk_problem_meta meta;
-	meta.l = l;
-	meta.n = n;
-	meta.nr_chunk = nr_chunk;
+    disk_problem_meta meta;
+    meta.l = l;
+    meta.n = n;
+    meta.nr_chunk = nr_chunk;
 
-	fwrite(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta), 1, f_meta);
+    fwrite(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta), 1, f_meta);
 }
 
 void FtrlData::split_chunks() {
@@ -234,8 +234,8 @@ void FtrlProblem::initialize() {
                 f[idx]++;
             }
         }
-		if(!param->in_memory)
-			chunk.clear();
+        if(!param->in_memory)
+            chunk.clear();
     }
     for (FtrlInt j = 0; j < data->n; j++) {
         if (param->freq)
@@ -610,24 +610,24 @@ void FtrlProblem::solve() {
             }
             if(!param->in_memory)
                 chunk.clear();
-            if (param->verbose)
-                fun();
-            if (!test_data->file_name.empty()) {
-                validate();
-            }
-
-            print_epoch_info();
-            if(param->auto_stop) {
-                if(va_loss > best_va_loss){
-                    memcpy(w.data(), prev_w.data(), data->n * sizeof(FtrlFloat));
-                    cout << endl << "Auto-stop. Use model at" << t <<"th iteration."<<endl;
-                    break;
-                }else{
-                    memcpy(prev_w.data(), w.data(), data->n * sizeof(FtrlFloat));
-                    best_va_loss = va_loss;
-                }
-            }
-            //printf("%d:g_norm=%lf\n", ind++, sqrt(g_norm));
         }
+        if (param->verbose)
+            fun();
+        if (!test_data->file_name.empty()) {
+            validate();
+        }
+
+        print_epoch_info();
+        if(param->auto_stop) {
+            if(va_loss > best_va_loss){
+                memcpy(w.data(), prev_w.data(), data->n * sizeof(FtrlFloat));
+                cout << endl << "Auto-stop. Use model at" << t <<"th iteration."<<endl;
+                break;
+            }else{
+                memcpy(prev_w.data(), w.data(), data->n * sizeof(FtrlFloat));
+                best_va_loss = va_loss;
+            }
+        }
+        //printf("%d:g_norm=%lf\n", ind++, sqrt(g_norm));
     }
 }
