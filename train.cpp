@@ -11,7 +11,7 @@ struct Option
 {
     shared_ptr<Parameter> param;
     FtrlInt verbose, solver;
-    string data_path, test_path;
+    string data_path, test_path, model_path, warm_model_path;
 };
 
 string basename(string path)
@@ -52,8 +52,9 @@ string train_help()
     "-l2 <lambda_2>: set regularization coefficient on l2 regularizer (default 0.1)\n"
     "-t <iter>: set number of iterations (default 20)\n"
     "-p <path>: set path to test set\n"
+    "-m <path>: set path to warm model\n"
     "-c <threads>: set number of cores\n"
-    "--norm: Apply instance-wise normlization."
+    "--norm: Apply instance-wise normlization.\n"
     "--no-auc: disable auc\n"
     "--in-memory: keep data in memroy\n"
     "--auto-stop: stop at the iteration that achieves the best validation loss (must be used with -p)\n"
@@ -155,6 +156,14 @@ Option parse_option(int argc, char **argv)
 
             option.test_path = string(args[i]);
         }
+        else if(args[i].compare("-m") == 0)
+        {
+            if(i == argc-1)
+                throw invalid_argument("need to specify warmstart model path after -m");
+            i++;
+
+            option.warm_model_path = string(args[i]);
+        }
         else if(args[i].compare("--norm") == 0)
         {
             option.param->normalized = true;
@@ -185,9 +194,17 @@ Option parse_option(int argc, char **argv)
         }
     }
 
-    if(i >= argc)
-        throw invalid_argument("training data not specified");
+    if(i != argc-2 && i != argc-1)
+        throw invalid_argument("cannot parse commmand\n");
     option.data_path = string(args[i++]);
+
+    if(i < argc) {
+        option.model_path = string(args[i]);
+    } else if(i == argc) {
+        option.model_path = basename(option.data_path) + ".model";
+    } else {
+        throw invalid_argument("cannot parse commmand\n");
+    }
 
     return option;
 }
@@ -212,7 +229,7 @@ int main(int argc, char *argv[])
         }
 
         FtrlProblem prob(data, test_data, option.param);
-        prob.initialize();
+        prob.initialize(option.param->normalized, option.warm_model_path);
         if (option.solver == 1) {
             cout << "Solver Type: FTRL" << endl;
             prob.solve();
@@ -225,8 +242,7 @@ int main(int argc, char *argv[])
             cout << "Solver Type: AdaGrad" << endl;
             prob.solve_adagrad();
         }
-        string model_path = basename(option.data_path) + ".model";
-        prob.save_model(model_path.c_str());
+        prob.save_model(option.model_path);
     }
     catch (invalid_argument &e)
     {

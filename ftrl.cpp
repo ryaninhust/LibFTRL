@@ -185,9 +185,11 @@ void FtrlProblem::save_model(string model_path) {
     f_out << "n " << data->n << endl;
 
     FtrlFloat *wa = w.data();
-    for (FtrlFloat j = 0; j < data->n; j++, wa++)
+    FtrlFloat *na = n.data();
+    FtrlFloat *za = z.data();
+    for (FtrlFloat j = 0; j < data->n; j++, wa++, na++, za++)
     {
-        f_out << "w" << j << " " << *wa << endl;
+        f_out << "w" << j << " " << *wa << " " <<  *na <<" " << *za << endl;
     }
     f_out.close();
 }
@@ -212,11 +214,54 @@ FtrlLong FtrlProblem::load_model(string model_path) {
     return nr_feature;
 }
 
-void FtrlProblem::initialize() {
-    w.resize(data->n, 0);
-    z.resize(data->n, 0);
-    n.resize(data->n, 0);
+void FtrlProblem::initialize(bool norm, string warm_model_path) {
     f.resize(data->n, 0);
+    if(warm_model_path.empty()) {
+        feats = data->n;
+        w.resize(data->n, 0);
+        z.resize(data->n, 0);
+        n.resize(data->n, 0);
+    }
+    else {
+        ifstream f_in(warm_model_path);
+        string dummy;
+        FtrlLong nr_feature;
+        f_in >> dummy >> dummy >> dummy >> nr_feature;
+        if(nr_feature >= data->n) {
+            feats = nr_feature;
+            w.resize(nr_feature, 0);
+            z.resize(nr_feature, 0);
+            n.resize(nr_feature, 0);
+            FtrlFloat *wptr = w.data();
+            FtrlFloat *nptr = n.data();
+            FtrlFloat *zptr = z.data();
+
+            for(FtrlLong j = 0; j < nr_feature; j++, wptr++, nptr++, zptr++)
+            {
+                f_in >> dummy;
+                f_in >> *wptr >> *nptr >> *zptr;
+            }
+        }
+        else {
+            feats = data->n;
+            w.resize(data->n);
+            z.resize(data->n);
+            n.resize(data->n);
+            FtrlFloat *wptr = w.data();
+            FtrlFloat *nptr = n.data();
+            FtrlFloat *zptr = z.data();
+            for(FtrlLong j = 0; j < nr_feature; j++, wptr++, nptr++, zptr++)
+            {
+                if(j < nr_feature) {
+                    f_in >> dummy;
+                    f_in >> *wptr >> *nptr >> *zptr;
+                }
+                else {
+                    *wptr = 0; *nptr = 0; *zptr = 0;
+                }
+            }
+        }
+    }
     t = 0;
     tr_loss = 0.0, va_loss = 0.0, fun_val = 0.0, gnorm = 0.0;
     FtrlInt nr_chunk = data->nr_chunk;
@@ -307,6 +352,7 @@ void FtrlProblem::validate() {
         for (FtrlInt i = 0; i < chunk.l; i++) {
 
             FtrlFloat y = chunk.labels[i], wTx = 0;
+            FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
@@ -314,7 +360,7 @@ void FtrlProblem::validate() {
                 if (idx > data->n) {
                     continue;
                 }
-                FtrlFloat val = x.val;
+                FtrlFloat val = x.val*r;
                 wTx += w[idx]*val;
             }
             va_scores[global_i+i] = wTx;
@@ -390,11 +436,12 @@ void FtrlProblem::solve_adagrad() {
         for (FtrlInt i = 0; i < chunk.l; i++) {
 
             FtrlFloat y=chunk.labels[i], wTx=0;
+            FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
-                FtrlFloat val = x.val;
+                FtrlFloat val = x.val*r;
                 wTx += w[idx]*val;
             }
 
@@ -414,7 +461,7 @@ void FtrlProblem::solve_adagrad() {
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
-                FtrlFloat val = x.val, g = kappa*val+l2*f[idx]*w[idx];
+                FtrlFloat val = x.val*r, g = kappa*val+l2*f[idx]*w[idx];
                 n[idx] += g*g;
                 w[idx] -= (a/(b+sqrt(n[idx])))*g;
             }
@@ -444,11 +491,12 @@ void FtrlProblem::solve_rda() {
         for (FtrlInt i = 0; i < chunk.l; i++) {
 
             FtrlFloat y=chunk.labels[i], wTx=0;
+            FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
-                FtrlFloat val = x.val;
+                FtrlFloat val = x.val*r;
                 wTx += w[idx]*val;
             }
 
@@ -468,7 +516,7 @@ void FtrlProblem::solve_rda() {
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
-                FtrlFloat val = x.val, g = kappa*val;
+                FtrlFloat val = x.val*r, g = kappa*val;
                 z[idx] += g;
                 w[idx] = -z[idx] / ((b+sqrt(n[idx]))/a+l2*f[idx]);
                 n[idx] += g*g;
@@ -503,11 +551,12 @@ void FtrlProblem::fun() {
         for (FtrlInt i = 0; i < chunk.l; i++) {
 
             FtrlFloat y=chunk.labels[i], wTx=0;
+            FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
-                FtrlFloat val = x.val;
+                FtrlFloat val = x.val*r;
                 wTx += w[idx]*val;
             }
 
@@ -529,7 +578,7 @@ void FtrlProblem::fun() {
             for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                 Node x = chunk.nodes[s];
                 FtrlInt idx = x.idx;
-                FtrlFloat val = x.val, g = kappa*val+l2*f[idx]*w[idx];
+                FtrlFloat val = x.val*r, g = kappa*val+l2*f[idx]*w[idx];
                 grad[idx] += g;
             }
         }
@@ -552,6 +601,8 @@ void FtrlProblem::solve() {
     FtrlFloat l1 = param->l1, l2 = param->l2, a = param->alpha, b = param->beta;
     FtrlFloat best_va_loss = numeric_limits<FtrlFloat>::max();
     vector<FtrlFloat> prev_w(data->n, 0);
+    vector<FtrlFloat> prev_n(data->n, 0);
+    vector<FtrlFloat> prev_z(data->n, 0);
 
     for (t = 0; t < param->nr_pass; t++) {
         vector<FtrlInt> outer_order(nr_chunk);
@@ -569,11 +620,12 @@ void FtrlProblem::solve() {
             for (FtrlInt ii = 0; ii < chunk.l; ii++) {
                 FtrlInt i = inner_oder[ii];
                 FtrlFloat y=chunk.labels[i], wTx=0;
+                FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
                 for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                     Node x = chunk.nodes[s];
                     FtrlInt idx = x.idx;
-                    FtrlFloat val = x.val, zi = z[idx], ni = n[idx];
+                    FtrlFloat val = x.val*r, zi = z[idx], ni = n[idx];
 
                     if (abs(zi) > l1*f[idx]) {
                         w[idx] = -(zi-(2*(zi>0)-1)*l1*f[idx]) / ((b+sqrt(ni))/a+l2*f[idx]);
@@ -601,7 +653,7 @@ void FtrlProblem::solve() {
                 for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
                     Node x = chunk.nodes[s];
                     FtrlInt idx = x.idx;
-                    FtrlFloat val = x.val, g = kappa*val, theta=0;
+                    FtrlFloat val = x.val*r, g = kappa*val, theta=0;
                     g_norm += g*g;
                     theta = 1/a*(sqrt(n[idx]+g*g)-sqrt(n[idx]));
                     z[idx] += g-theta*w[idx];
@@ -621,10 +673,14 @@ void FtrlProblem::solve() {
         if(param->auto_stop) {
             if(va_loss > best_va_loss){
                 memcpy(w.data(), prev_w.data(), data->n * sizeof(FtrlFloat));
-                cout << endl << "Auto-stop. Use model at" << t <<"th iteration."<<endl;
+                memcpy(n.data(), prev_n.data(), data->n * sizeof(FtrlFloat));
+                memcpy(z.data(), prev_z.data(), data->n * sizeof(FtrlFloat));
+                cout << "Auto-stop. Use model at" << t <<"th iteration."<<endl;
                 break;
             }else{
                 memcpy(prev_w.data(), w.data(), data->n * sizeof(FtrlFloat));
+                memcpy(prev_n.data(), n.data(), data->n * sizeof(FtrlFloat));
+                memcpy(prev_z.data(), z.data(), data->n * sizeof(FtrlFloat));
                 best_va_loss = va_loss;
             }
         }

@@ -83,11 +83,13 @@ public:
 
 
     vector<FtrlFloat> w, z, n, f;
-    FtrlInt t;
-    FtrlFloat tr_loss, va_loss, va_auc, fun_val, gnorm, reg;
-    FtrlFloat start_time;
+	bool normlization = false;
+    FtrlInt t = 0;
+	FtrlLong feats = 0;
+    FtrlFloat tr_loss = 0.0f, va_loss = 0.0f, va_auc = 0.0f, fun_val = 0.0f, gnorm = 0.0f, reg = 0.0f;
+    FtrlFloat start_time = 0.0f;
 
-    void initialize();
+    void initialize(bool norm, string warm_model_path);
     void solve();
     void solve_adagrad();
     void solve_rda();
