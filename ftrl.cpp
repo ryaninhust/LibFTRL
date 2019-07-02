@@ -175,9 +175,11 @@ void FtrlProblem::save_model(string model_path) {
     FtrlFloat *wa = w.data();
     FtrlFloat *na = n.data();
     FtrlFloat *za = z.data();
+    char buffer[1024];
     for (FtrlInt j = 0; j < data->n; j++, wa++, na++, za++)
     {
-        f_out << "w" << j << " " << *wa << " " <<  *na <<" " << *za << endl;
+        sprintf(buffer, "w%ld %lf %lf %lf", j, *wa, *na, *za);
+        f_out << buffer << endl;
     }
     f_out.close();
 }
