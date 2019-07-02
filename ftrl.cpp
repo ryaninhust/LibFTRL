@@ -175,7 +175,7 @@ void FtrlProblem::save_model(string model_path) {
     FtrlFloat *wa = w.data();
     FtrlFloat *na = n.data();
     FtrlFloat *za = z.data();
-    for (FtrlFloat j = 0; j < data->n; j++, wa++, na++, za++)
+    for (FtrlInt j = 0; j < data->n; j++, wa++, na++, za++)
     {
         f_out << "w" << j << " " << *wa << " " <<  *na <<" " << *za << endl;
     }
