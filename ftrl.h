@@ -34,9 +34,9 @@ class Parameter {
 
 public:
     FtrlFloat l1, l2, alpha, beta;
-    FtrlInt nr_pass, nr_threads;
+    FtrlInt nr_pass = 20, nr_threads = 1;
     bool normalized, verbose, freq, auto_stop, no_auc, in_memory;
-    Parameter():l1(0.1), l2(0.1), alpha(0.1), beta(1), normalized(false),verbose(true), freq(true), auto_stop(false), no_auc(false), in_memory(false), nr_threads(1){};
+    Parameter():l1(0.1), l2(0.1), alpha(0.1), beta(1), normalized(false), verbose(true), freq(true), auto_stop(false), no_auc(false), in_memory(false){};
 };
 
 class FtrlChunk {
@@ -63,13 +63,17 @@ public:
     string file_name;
     FtrlLong l, n;
     FtrlInt nr_chunk;
+    string meta_name;
 
     vector<FtrlChunk> chunks;
 
-    FtrlData(string file_name): file_name(file_name), l(0), n(0), nr_chunk(0) {};
+    FtrlData(string file_name): file_name(file_name), l(0), n(0), nr_chunk(0) {
+        meta_name = file_name + ".meta";
+    };
     void print_data_info();
     void split_chunks();
     void write_meta();
+    void read_meta();
 };
 
 class FtrlProblem {
@@ -84,7 +88,7 @@ public:
 
     vector<FtrlFloat> w, z, n, f;
 	bool normlization = false;
-    FtrlInt t = 0;
+    FtrlInt t = 10;
 	FtrlLong feats = 0;
     FtrlFloat tr_loss = 0.0f, va_loss = 0.0f, va_auc = 0.0f, fun_val = 0.0f, gnorm = 0.0f, reg = 0.0f;
     FtrlFloat start_time = 0.0f;

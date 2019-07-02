@@ -13,31 +13,26 @@ struct chunk_meta {
 };
 
 void FtrlChunk::write() {
-    FILE *f_bin = fopen(file_name.c_str(), "wb");
-    if (f_bin == nullptr)
-        cout << "Error" << endl;
+    ofstream f_bin(file_name, ios::out | ios::binary);
 
     chunk_meta meta;
     meta.l = l;
     meta.nnz = nnz;
     meta.chunk_id = chunk_id;
 
-    fwrite(reinterpret_cast<char*>(&meta), sizeof(chunk_meta), 1, f_bin);
-    fwrite(labels.data(), sizeof(FtrlFloat), l, f_bin);
-    fwrite(nnzs.data(), sizeof(FtrlInt), l+1, f_bin);
-    fwrite(R.data(), sizeof(FtrlFloat), l, f_bin);
-    fwrite(nodes.data(), sizeof(Node), nnz, f_bin);
-    fclose(f_bin);
+    f_bin.write(reinterpret_cast<char*>(&meta), sizeof(chunk_meta));
+    f_bin.write(reinterpret_cast<char*>(labels.data()), sizeof(FtrlFloat) * l);
+    f_bin.write(reinterpret_cast<char*>(nnzs.data()), sizeof(FtrlInt) * (l+1));
+    f_bin.write(reinterpret_cast<char*>(R.data()), sizeof(FtrlFloat) * l);
+    f_bin.write(reinterpret_cast<char*>(nodes.data()), sizeof(Node) * nnz);
 }
 
 void FtrlChunk::read() {
-    FILE *f_tr = fopen(file_name.c_str(), "rb");
-    if (f_tr == nullptr)
-        cout << "Error" << endl;
+    ifstream f_bin(file_name, ios::in | ios::binary);
 
     chunk_meta meta;
 
-    fread(reinterpret_cast<char *>(&meta), sizeof(chunk_meta), 1, f_tr);
+    f_bin.read(reinterpret_cast<char *>(&meta), sizeof(chunk_meta));
     l = meta.l;
     nnz = meta.nnz;
     chunk_id = meta.chunk_id;
@@ -47,11 +42,10 @@ void FtrlChunk::read() {
     nodes.resize(nnz);
     nnzs.resize(l+1);
 
-    fread(labels.data(), sizeof(FtrlFloat), l, f_tr);
-    fread(nnzs.data(), sizeof(FtrlInt), l+1, f_tr);
-    fread(R.data(), sizeof(FtrlFloat), l, f_tr);
-    fread(nodes.data(), sizeof(Node), nnz, f_tr);
-    fclose(f_tr);
+    f_bin.read(reinterpret_cast<char*>(labels.data()), sizeof(FtrlFloat) * l);
+    f_bin.read(reinterpret_cast<char*>(nnzs.data()), sizeof(FtrlInt) * (l+1));
+    f_bin.read(reinterpret_cast<char*>(R.data()), sizeof(FtrlFloat) * l);
+    f_bin.read(reinterpret_cast<char*>(nodes.data()), sizeof(Node) * nnz);
 }
 
 void FtrlChunk::clear() {
@@ -73,29 +67,30 @@ struct disk_problem_meta {
 
 void FtrlData::write_meta() {
     string meta_name = file_name + ".meta";
-    FILE *f_meta = fopen(meta_name.c_str(), "wb");
-    if (f_meta == nullptr)
-        cout << "Error" << endl;
+    ofstream f_meta(meta_name, ios::out | ios::binary);
 
     disk_problem_meta meta;
     meta.l = l;
     meta.n = n;
     meta.nr_chunk = nr_chunk;
 
-    fwrite(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta), 1, f_meta);
+    f_meta.write(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta));
+}
+
+void FtrlData::read_meta() {
+    ifstream f_meta(meta_name, ios::in | ios::binary);
+
+    disk_problem_meta meta;
+
+    f_meta.read(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta));
+    l = meta.l;
+    n = meta.n;
+    nr_chunk = meta.nr_chunk;
 }
 
 void FtrlData::split_chunks() {
-    string meta_name = file_name + ".meta";
     if(exists(meta_name)) {
-        FILE *f_meta = fopen(meta_name.c_str(), "rb");
-        disk_problem_meta meta;
-        if (f_meta == nullptr)
-            cout << "Error" << endl;
-        fread(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta), 1, f_meta);
-        l = meta.l;
-        n = meta.n;
-        nr_chunk = meta.nr_chunk;
+        read_meta();
         for(FtrlInt chunk_id=0; chunk_id < nr_chunk; chunk_id++) {
             FtrlChunk chunk(file_name, chunk_id);
             chunks.push_back(chunk);
@@ -160,14 +155,7 @@ void FtrlData::split_chunks() {
         chunk.clear();
 
         chunks.push_back(chunk);
-        FILE *f_meta = fopen(meta_name.c_str(), "wb");
-        if (f_meta == nullptr)
-            cout << "Error" << endl;
-        disk_problem_meta meta;
-        meta.l = l;
-        meta.n = n;
-        meta.nr_chunk = nr_chunk;
-        fwrite(reinterpret_cast<char*>(&meta), sizeof(disk_problem_meta), 1, f_meta);
+        write_meta();
     }
 }
 
@@ -267,7 +255,7 @@ void FtrlProblem::initialize(bool norm, string warm_model_path) {
     FtrlInt nr_chunk = data->nr_chunk;
     for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
 
-        FtrlChunk& chunk = data->chunks[chunk_id];
+        FtrlChunk chunk = data->chunks[chunk_id];
 
         chunk.read();
 
@@ -345,7 +333,7 @@ void FtrlProblem::validate() {
     vector<FtrlFloat> va_labels(test_data->l, 0), va_scores(test_data->l, 0), va_orders(test_data->l, 0);
     for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
 
-        FtrlChunk& chunk = test_data->chunks[chunk_id];
+        FtrlChunk chunk = test_data->chunks[chunk_id];
         chunk.read();
 
 #pragma omp parallel for schedule(static) reduction(+: local_va_loss)
@@ -429,7 +417,7 @@ void FtrlProblem::solve_adagrad() {
     for (t = 0; t < param->nr_pass; t++) {
     for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
 
-        FtrlChunk& chunk = data->chunks[chunk_id];
+        FtrlChunk chunk = data->chunks[chunk_id];
 
         chunk.read();
 
@@ -484,7 +472,7 @@ void FtrlProblem::solve_rda() {
     for (t = 0; t < param->nr_pass; t++) {
     for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
 
-        FtrlChunk& chunk = data->chunks[chunk_id];
+        FtrlChunk chunk = data->chunks[chunk_id];
 
         chunk.read();
 
@@ -540,7 +528,7 @@ void FtrlProblem::fun() {
     fun_val = 0.0, tr_loss = 0.0, gnorm = 0.0, reg = 0.0;
     for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
 
-        FtrlChunk& chunk = data->chunks[chunk_id];
+        FtrlChunk chunk = data->chunks[chunk_id];
 
         if(!param->in_memory)
             chunk.read();
