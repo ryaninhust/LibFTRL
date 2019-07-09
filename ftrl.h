@@ -101,6 +101,8 @@ public:
     void print_header_info();
     void save_model(string model_path);
     FtrlLong load_model(string model_path);
+    void save_model_txt(string model_path);
+    FtrlLong load_model_txt(string model_path);
     void fun();
     void validate();
 };

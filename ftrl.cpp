@@ -168,6 +168,33 @@ void FtrlData::print_data_info() {
 }
 
 void FtrlProblem::save_model(string model_path) {
+    ofstream f(model_path, ios::out | ios::binary);
+
+    f.write(reinterpret_cast<char*>(&param->normalized), sizeof(bool));
+    f.write(reinterpret_cast<char*>(&data->n), sizeof(FtrlLong));
+    f.write(reinterpret_cast<char*>(w.data()), sizeof(FtrlFloat) * data->n);
+    f.write(reinterpret_cast<char*>(n.data()), sizeof(FtrlFloat) * data->n);
+    f.write(reinterpret_cast<char*>(z.data()), sizeof(FtrlFloat) * data->n);
+}
+
+FtrlLong FtrlProblem::load_model(string model_path) {
+    ifstream f(model_path, ios::in | ios::binary);
+
+    bool normalized;
+    FtrlLong nr_feature;
+    f.read(reinterpret_cast<char*>(&normalized), sizeof(bool));
+    f.read(reinterpret_cast<char*>(&nr_feature), sizeof(FtrlLong));
+    w.resize(nr_feature);
+    n.resize(nr_feature);
+    z.resize(nr_feature);
+    f.read(reinterpret_cast<char*>(w.data()), sizeof(FtrlFloat) * nr_feature);
+    f.read(reinterpret_cast<char*>(n.data()), sizeof(FtrlFloat) * nr_feature);
+    f.read(reinterpret_cast<char*>(z.data()), sizeof(FtrlFloat) * nr_feature);
+
+    return nr_feature;
+}
+
+void FtrlProblem::save_model_txt(string model_path) {
     ofstream f_out(model_path);
     f_out << "norm " << param->normalized << endl;
     f_out << "n " << data->n << endl;
@@ -184,7 +211,7 @@ void FtrlProblem::save_model(string model_path) {
     f_out.close();
 }
 
-FtrlLong FtrlProblem::load_model(string model_path) {
+FtrlLong FtrlProblem::load_model_txt(string model_path) {
 
     ifstream f_in(model_path);
 
@@ -599,7 +626,7 @@ void FtrlProblem::solve() {
         iota(outer_order.begin(), outer_order.end(), 0);
         random_shuffle(outer_order.begin(),outer_order.end());
         for (auto chunk_id:outer_order) {
-            FtrlChunk &chunk = data->chunks[chunk_id];
+            FtrlChunk chunk = data->chunks[chunk_id];
             if(!param->in_memory)
                 chunk.read();
             vector<FtrlInt> inner_oder(chunk.l);
