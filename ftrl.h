@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <iomanip>
+#include <cstring>
 
 #include "omp.h"
 
@@ -33,9 +34,9 @@ class Parameter {
 
 public:
     FtrlFloat l1, l2, alpha, beta;
-    FtrlInt nr_pass, nr_threads;
-    bool normalized, verbose, freq;
-    Parameter():l1(0.1), l2(0.1), alpha(0.1), beta(1), normalized(false),verbose(true), freq(true), nr_threads(1){};
+    FtrlInt nr_pass = 20, nr_threads = 1;
+    bool normalized, verbose, freq, auto_stop, no_auc, in_memory;
+    Parameter():l1(0.1), l2(0.1), alpha(0.1), beta(1), normalized(false), verbose(true), freq(true), auto_stop(false), no_auc(false), in_memory(false){};
 };
 
 class FtrlChunk {
@@ -62,12 +63,17 @@ public:
     string file_name;
     FtrlLong l, n;
     FtrlInt nr_chunk;
+    string meta_name;
 
     vector<FtrlChunk> chunks;
 
-    FtrlData(string file_name): file_name(file_name), l(0), n(0), nr_chunk(0) {};
+    FtrlData(string file_name): file_name(file_name), l(0), n(0), nr_chunk(0) {
+        meta_name = file_name + ".meta";
+    };
     void print_data_info();
     void split_chunks();
+    void write_meta();
+    void read_meta();
 };
 
 class FtrlProblem {
@@ -81,11 +87,13 @@ public:
 
 
     vector<FtrlFloat> w, z, n, f;
-    FtrlInt t;
-    FtrlFloat tr_loss, va_loss, va_auc, fun_val, gnorm, reg;
-    FtrlFloat start_time;
+	bool normlization = false;
+    FtrlInt t = 10;
+	FtrlLong feats = 0;
+    FtrlFloat tr_loss = 0.0f, va_loss = 0.0f, va_auc = 0.0f, fun_val = 0.0f, gnorm = 0.0f, reg = 0.0f;
+    FtrlFloat start_time = 0.0f;
 
-    void initialize();
+    void initialize(bool norm, string warm_model_path);
     void solve();
     void solve_adagrad();
     void solve_rda();
@@ -93,6 +101,8 @@ public:
     void print_header_info();
     void save_model(string model_path);
     FtrlLong load_model(string model_path);
+    void save_model_txt(string model_path);
+    FtrlLong load_model_txt(string model_path);
     void fun();
     void validate();
 };
