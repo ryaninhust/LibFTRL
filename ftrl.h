@@ -11,6 +11,8 @@
 #include <iomanip>
 #include <cstring>
 #include <numeric>
+#include <cstdlib>
+#include <limits>
 
 #include "omp.h"
 

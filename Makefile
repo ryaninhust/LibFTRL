@@ -1,4 +1,4 @@
-CXX = g++
+CXX = /usr/local/bin/g++-11
 CXXFLAGS = -Wall -O3 -std=c++0x -march=native
 
 # comment the following flags if you do not want to use OpenMP

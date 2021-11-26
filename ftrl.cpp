@@ -450,8 +450,9 @@ void FtrlProblem::solve_adagrad() {
 
         chunk.read();
 
-        for (FtrlInt i = 0; i < chunk.l; i++) {
+        for (FtrlInt i_ = 0; i_ < chunk.l; i_++) {
 
+            FtrlInt i = rand() % chunk.l;
             FtrlFloat y=chunk.labels[i], wTx=0;
             FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
@@ -497,16 +498,18 @@ void FtrlProblem::solve_adagrad() {
 void FtrlProblem::solve_sg() {
     print_header_info();
     FtrlInt nr_chunk = data->nr_chunk;
-    FtrlFloat l2 = param->l2, a = param->alpha, b = param->beta;
+    FtrlFloat l2 = param->l2, a = param->alpha;
     for (t = 0; t < param->nr_pass; t++) {
     for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
+
 
         FtrlChunk chunk = data->chunks[chunk_id];
 
         chunk.read();
 
-        for (FtrlInt i = 0; i < chunk.l; i++) {
+        for (FtrlInt i_ = 0; i_ < chunk.l; i_++) {
 
+            FtrlInt i = rand() % chunk.l;
             FtrlFloat y=chunk.labels[i], wTx=0;
             FtrlFloat r=param->normalized ? chunk.R[i]:1;
 
