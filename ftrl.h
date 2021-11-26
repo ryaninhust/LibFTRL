@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <cstring>
+#include <numeric>
 
 #include "omp.h"
 
