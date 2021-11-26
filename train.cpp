@@ -46,6 +46,7 @@ string train_help()
     "     0 -- AdaGrad framework\n"
     "     1 -- FTRL framework\n"
     "     2 -- RDA framework\n"
+    "     3 -- Plain SG framework\n"
     "-a <alpha>: set initial learning rate\n"
     "-b <beta>: set shrinking base for learning rate schedule\n"
     "-l1 <lambda_1>: set regularization coefficient on l1 regularizer (default 0.1)\n"
@@ -237,6 +238,10 @@ int main(int argc, char *argv[])
         else if (option.solver == 2) {
             cout << "Solver Type: RDA" << endl;
             prob.solve_rda();
+        }
+        else if (option.solver == 3) {
+            cout << "Solver Type: SG" << endl;
+            prob.solve_sg();
         }
         else {
             cout << "Solver Type: AdaGrad" << endl;

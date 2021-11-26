@@ -494,6 +494,60 @@ void FtrlProblem::solve_adagrad() {
     }
 }
 
+void FtrlProblem::solve_sg() {
+    print_header_info();
+    FtrlInt nr_chunk = data->nr_chunk;
+    FtrlFloat l2 = param->l2, a = param->alpha, b = param->beta;
+    for (t = 0; t < param->nr_pass; t++) {
+    for (FtrlInt chunk_id = 0; chunk_id < nr_chunk; chunk_id++) {
+
+        FtrlChunk chunk = data->chunks[chunk_id];
+
+        chunk.read();
+
+        for (FtrlInt i = 0; i < chunk.l; i++) {
+
+            FtrlFloat y=chunk.labels[i], wTx=0;
+            FtrlFloat r=param->normalized ? chunk.R[i]:1;
+
+            for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
+                Node x = chunk.nodes[s];
+                FtrlInt idx = x.idx;
+                FtrlFloat val = x.val*r;
+                wTx += w[idx]*val;
+            }
+
+            FtrlFloat exp_m, tmp;
+
+            if (wTx*y > 0) {
+                exp_m = exp(-y*wTx);
+                tmp = exp_m/(1+exp_m);
+            }
+            else {
+                exp_m = exp(y*wTx);
+                tmp = 1/(1+exp_m);
+            }
+
+            FtrlFloat kappa = -y*tmp;
+
+            for (FtrlInt s = chunk.nnzs[i]; s < chunk.nnzs[i+1]; s++) {
+                Node x = chunk.nodes[s];
+                FtrlInt idx = x.idx;
+                FtrlFloat val = x.val*r, g = kappa*val+l2*f[idx]*w[idx];
+                w[idx] -= a*g;
+            }
+        }
+        chunk.clear();
+    }
+    if (param->verbose)
+        fun();
+    if (!test_data->file_name.empty()) {
+    validate();
+    }
+    print_epoch_info();
+    }
+}
+
 void FtrlProblem::solve_rda() {
     print_header_info();
     FtrlInt nr_chunk = data->nr_chunk;

@@ -98,6 +98,7 @@ public:
     void solve();
     void solve_adagrad();
     void solve_rda();
+    void solve_sg();
     void print_epoch_info();
     void print_header_info();
     void save_model(string model_path);
